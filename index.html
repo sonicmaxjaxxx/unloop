@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2D5A3D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Unloop">
+    <meta name="description" content="Unloop — 打破OCD循环的数字伴侣">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Unloop</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%232D5A3D'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='280' font-family='serif' fill='white'>U</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%232D5A3D'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='280' font-family='serif' fill='white'>U</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FAF7F2;
+            --surface: #FFFFFF;
+            --surface-alt: #F5F1EA;
+            --primary: #2D5A3D;
+            --primary-bright: #3D7A28;
+            --primary-light: #E8F0E2;
+            --primary-glow: rgba(61,122,40,0.15);
+            --accent: #C4621A;
+            --accent-light: #FDF0E6;
+            --danger: #9B2C2C;
+            --danger-light: #FEF2F2;
+            --text-1: #1A1A1A;
+            --text-2: #4A4A4A;
+            --text-3: #8A8580;
+            --border: #E5E2DB;
+            --border-light: #F0EDE8;
+            --calm-bg: #141C18;
+            --calm-surface: #1E2A24;
+            --calm-text: #D4E8D0;
+            --calm-muted: #6B8A72;
+            --calm-accent: #7FB069;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 20px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.06),0 1px 3px rgba(0,0,0,0.04);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+            --tab-h: 64px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+        html,body{height:100%;overflow:hidden;}
+        body{
+            font-family:'Noto Sans SC',-apple-system,sans-serif;
+            background:var(--bg);color:var(--text-1);
+            line-height:1.6;font-size:15px;
+            -webkit-font-smoothing:antialiased;
+            padding-top:env(safe-area-inset-top,0);
+        }
+
+        /* Splash */
+        .splash{position:fixed;inset:0;background:var(--calm-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity 0.6s ease;}
+        .splash.hide{opacity:0;pointer-events:none;}
+        .splash-logo{font-family:'Noto Serif SC',serif;font-size:36px;font-weight:700;color:var(--calm-accent);margin-bottom:8px;animation:fadeIn 0.8s ease;}
+        .splash-sub{font-size:13px;color:var(--calm-muted);animation:fadeIn 0.8s ease 0.3s forwards;opacity:0;}
+
+        /* Install Banner */
+        .install-banner{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--primary);color:white;padding:12px 20px;display:none;align-items:center;gap:12px;z-index:999;font-size:13px;padding-top:calc(12px + env(safe-area-inset-top,0));}
+        .install-banner.show{display:flex;}
+        .install-banner .btn-install{background:white;color:var(--primary);border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;}
+        .install-banner .btn-close-install{background:none;border:none;color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;padding:4px;margin-left:auto;}
+
+        /* App Shell */
+        #app{position:relative;width:100%;max-width:480px;height:100vh;height:100dvh;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+        .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px calc(var(--tab-h)+20px);display:none;-webkit-overflow-scrolling:touch;}
+        .screen.active{display:block;}
+        .screen::-webkit-scrollbar{display:none;}
+
+        /* Tab Bar */
+        .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--tab-h);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;padding-bottom:env(safe-area-inset-bottom,0);}
+        .tab-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:10px;font-weight:500;transition:color 0.2s;min-width:56px;font-family:inherit;}
+        .tab-btn.active{color:var(--primary);}
+        .tab-btn svg{width:24px;height:24px;}
+        .tab-btn-calm{position:relative;top:-16px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:white!important;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(45,90,61,0.35);transition:transform 0.2s;}
+        .tab-btn-calm:active{transform:scale(0.95);}
+        .tab-btn-calm svg{width:26px;height:26px;}
+        .tab-btn-calm span{display:none;}
+
+        /* Typography */
+        h1{font-family:'Noto Serif SC',serif;font-size:28px;font-weight:700;line-height:1.3;}
+        h2{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:600;line-height:1.35;}
+        h3{font-size:17px;font-weight:600;}
+        .mono{font-family:'JetBrains Mono',monospace;}
+
+        /* Cards */
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;box-shadow:var(--shadow);}
+        .card-accent{border-left:3px solid var(--primary);}
+        .card-warm{border-left:3px solid var(--accent);background:var(--accent-light);}
+        .card-danger{border-left:3px solid var(--danger);background:var(--danger-light);}
+
+        /* Buttons */
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 28px;border-radius:var(--radius);font-size:15px;font-weight:600;border:none;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+        .btn:active{transform:scale(0.97);}
+        .btn-primary{background:var(--primary);color:white;}
+        .btn-ghost{background:var(--surface-alt);color:var(--text-2);}
+        .btn-danger{background:var(--danger);color:white;}
+        .btn-block{width:100%;}
+        .btn-sm{padding:10px 18px;font-size:13px;}
+
+        /* Animations */
+        @keyframes fadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+        @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+
+        /* Modal */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+        .modal-overlay.active{display:flex;}
+        .modal{background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding:24px 20px 40px;animation:slideUp 0.3s ease;}
+        .modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+
+        /* HOME */
+        .home-header{padding:24px 0 8px;}
+        .greeting{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:600;margin-bottom:4px;}
+        .greeting-sub{color:var(--text-3);font-size:14px;}
+        .quick-calm{background:linear-gradient(135deg,var(--primary) 0%,#1E4A2E 100%);border-radius:var(--radius-lg);padding:28px 24px;margin:20px 0;color:white;cursor:pointer;transition:transform 0.2s;position:relative;overflow:hidden;}
+        .quick-calm:active{transform:scale(0.98);}
+        .quick-calm::after{content:'';position:absolute;top:-30%;right:-20%;width:200px;height:200px;background:radial-gradient(circle,rgba(127,176,105,0.3) 0%,transparent 70%);pointer-events:none;}
+        .quick-calm h3{font-size:18px;margin-bottom:6px;}
+        .quick-calm p{font-size:13px;opacity:0.8;margin-bottom:0;}
+        .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0;}
+        .stat-mini{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 12px;text-align:center;}
+        .stat-mini .val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--primary);}
+        .stat-mini .lbl{font-size:11px;color:var(--text-3);margin-top:2px;}
+        .section-title{font-size:15px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin:28px 0 12px;}
+        .today-challenge-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:box-shadow 0.2s;margin-bottom:10px;}
+        .today-challenge-card:active{box-shadow:var(--shadow-lg);}
+        .challenge-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+        .challenge-icon.door{background:var(--primary-light);}
+        .challenge-icon.market{background:var(--accent-light);}
+        .challenge-info{flex:1;}
+        .challenge-info .name{font-weight:600;font-size:15px;}
+        .challenge-info .desc{font-size:13px;color:var(--text-3);}
+        .challenge-arrow{color:var(--text-3);font-size:18px;}
+
+        /* CALM */
+        #screen-calm{padding:0;}
+        #screen-calm.active{display:flex;flex-direction:column;}
+        .calm-pre{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px calc(var(--tab-h)+40px);text-align:center;}
+        .calm-pre h2{font-family:'Noto Serif SC',serif;margin-bottom:8px;}
+        .calm-pre .sub{color:var(--text-3);margin-bottom:36px;}
+        .calm-mode-btn{width:100%;max-width:320px;padding:24px 20px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface);text-align:left;cursor:pointer;margin-bottom:16px;transition:all 0.2s;}
+        .calm-mode-btn:active{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
+        .calm-mode-btn h3{margin-bottom:4px;font-size:16px;}
+        .calm-mode-btn p{font-size:13px;color:var(--text-3);margin-bottom:0;}
+        .calm-mode-btn .icon{font-size:24px;margin-bottom:8px;}
+        .calm-session{display:none;flex-direction:column;height:100vh;height:100dvh;background:var(--calm-bg);position:relative;}
+        .calm-session.active{display:flex;}
+        .calm-timer-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+        .calm-timer-circle{width:200px;height:200px;border-radius:50%;border:3px solid var(--calm-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;animation:breathe 6s ease-in-out infinite;}
+        .calm-timer-circle::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(127,176,105,0.15);animation:breathe 6s ease-in-out infinite 0.5s;}
+        .calm-time{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:var(--calm-text);letter-spacing:-0.02em;}
+        .calm-time-label{font-size:12px;color:var(--calm-muted);margin-top:4px;}
+        .calm-phase{margin-top:32px;text-align:center;min-height:80px;}
+        .calm-message{font-size:17px;line-height:1.7;color:var(--calm-text);max-width:300px;opacity:0;transition:opacity 0.8s ease;}
+        .calm-message.visible{opacity:1;}
+        .calm-suds-bar{display:flex;align-items:center;gap:12px;padding:16px 24px;color:var(--calm-muted);font-size:13px;}
+        .calm-suds-bar input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--calm-surface);}
+        .calm-suds-bar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--calm-accent);box-shadow:0 0 12px rgba(127,176,105,0.4);}
+        .calm-suds-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--calm-accent);min-width:30px;text-align:center;}
+        .calm-actions{display:flex;gap:12px;padding:16px 20px calc(var(--tab-h)+20px);}
+        .calm-actions .btn{flex:1;padding:16px;border-radius:var(--radius);font-size:14px;}
+        .btn-calm-done{background:var(--calm-accent);color:var(--calm-bg);}
+        .btn-calm-compulsion{background:var(--calm-surface);color:var(--calm-muted);border:1px solid rgba(255,255,255,0.1);}
+        .calm-review{display:none;flex-direction:column;height:100vh;height:100dvh;background:var(--calm-bg);padding:60px 24px 40px;overflow-y:auto;}
+        .calm-review.active{display:flex;}
+        .calm-review h2{color:var(--calm-text);font-family:'Noto Serif SC',serif;margin-bottom:24px;text-align:center;}
+        .review-stat{background:var(--calm-surface);border-radius:var(--radius);padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;}
+        .review-stat .val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--calm-accent);}
+        .review-stat .lbl{color:var(--calm-muted);font-size:13px;}
+        .review-stat .lbl strong{color:var(--calm-text);display:block;font-size:15px;}
+        .review-message{color:var(--calm-text);font-size:16px;line-height:1.8;text-align:center;margin:24px 0;padding:20px;background:var(--calm-surface);border-radius:var(--radius);}
+        .review-question{color:var(--calm-muted);font-size:14px;text-align:center;margin-bottom:12px;}
+        .review-options{display:flex;gap:10px;margin-bottom:24px;}
+        .review-opt{flex:1;padding:14px 8px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.1);background:var(--calm-surface);color:var(--calm-muted);font-size:13px;text-align:center;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+        .review-opt.selected{border-color:var(--calm-accent);color:var(--calm-accent);background:rgba(127,176,105,0.1);}
+
+        /* STEPS */
+        .scenario-header{display:flex;align-items:center;gap:12px;padding:20px 0 12px;cursor:pointer;}
+        .scenario-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+        .scenario-icon.door{background:var(--primary-light);}
+        .scenario-icon.market{background:var(--accent-light);}
+        .scenario-header h3{flex:1;}
+        .scenario-header .toggle{color:var(--text-3);transition:transform 0.3s;}
+        .scenario-header .toggle.open{transform:rotate(180deg);}
+        .level-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;transition:all 0.3s;}
+        .level-card.locked{opacity:0.5;}
+        .level-card.current{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
+        .level-card.done{border-color:var(--primary-bright);background:var(--primary-light);}
+        .level-top{display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;}
+        .level-badge{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0;}
+        .level-card.locked .level-badge{background:var(--surface-alt);color:var(--text-3);}
+        .level-card.current .level-badge{background:var(--primary);color:white;}
+        .level-card.done .level-badge{background:var(--primary-bright);color:white;}
+        .level-info{flex:1;}
+        .level-info .name{font-weight:600;font-size:14px;}
+        .level-info .anxiety{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono',monospace;}
+        .level-status{font-size:18px;}
+        .level-detail{display:none;padding:0 16px 16px;border-top:1px solid var(--border-light);}
+        .level-card.expanded .level-detail{display:block;}
+        .level-detail h4{font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 6px;}
+        .level-detail p{font-size:13px;color:var(--text-2);line-height:1.6;}
+        .level-actions{display:flex;gap:10px;margin-top:14px;}
+        .progress-dots{display:flex;gap:6px;margin:8px 0 4px;}
+        .progress-dot{width:8px;height:8px;border-radius:50%;background:var(--border);}
+        .progress-dot.filled{background:var(--primary);}
+
+        /* LETTERS */
+        .letter-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:box-shadow 0.2s;}
+        .letter-card:active{box-shadow:var(--shadow-lg);}
+        .letter-preview{font-size:14px;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;}
+        .letter-meta{font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:8px;}
+        .letter-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;}
+        .letter-tag.door{background:var(--primary-light);color:var(--primary);}
+        .letter-tag.market{background:var(--accent-light);color:var(--accent);}
+        .letter-tag.general{background:var(--surface-alt);color:var(--text-3);}
+        .letter-compose textarea{width:100%;min-height:180px;border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:inherit;font-size:15px;line-height:1.7;color:var(--text-1);resize:vertical;outline:none;transition:border-color 0.2s;}
+        .letter-compose textarea:focus{border-color:var(--primary);}
+        .letter-compose textarea::placeholder{color:var(--text-3);}
+        .letter-scenario-select{display:flex;gap:8px;margin-bottom:16px;}
+        .scenario-opt{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+        .scenario-opt.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:500;}
+
+        /* TRENDS */
+        .trend-chart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+        .trend-chart h4{font-size:13px;color:var(--text-3);margin-bottom:12px;}
+        .chart-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:10px;}
+        .chart-bar{flex:1;border-radius:4px 4px 0 0;background:var(--primary-light);position:relative;min-width:0;transition:height 0.5s ease;}
+        .chart-bar .tip{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-3);white-space:nowrap;}
+        .chart-labels{display:flex;gap:6px;margin-top:6px;}
+        .chart-labels span{flex:1;text-align:center;font-size:10px;color:var(--text-3);}
+        .empty-state{text-align:center;padding:40px 20px;color:var(--text-3);}
+        .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:0.5;}
+        .empty-state p{font-size:14px;}
+
+        .text-muted{color:var(--text-3);}.text-sm{font-size:13px;}.mb-4{margin-bottom:16px;}
+        @media(min-width:481px){#app{border-left:1px solid var(--border);border-right:1px solid var(--border);}}
+    </style>
+</head>
+<body>
+
+<div class="splash" id="splash">
+    <div class="splash-logo">Unloop</div>
+    <div class="splash-sub">打破OCD循环</div>
+</div>
+
+<div class="install-banner" id="install-banner">
+    <span>安装 Unloop 到主屏幕</span>
+    <button class="btn-install" id="btn-install">安装</button>
+    <button class="btn-close-install" onclick="document.getElementById('install-banner').classList.remove('show')">&times;</button>
+</div>
+
+<div id="app">
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+        <div class="home-header">
+            <div class="greeting" id="greeting">你好</div>
+            <div class="greeting-sub" id="greeting-sub">每一天的一步，都算数。</div>
+        </div>
+        <div class="quick-calm" onclick="app.startCalm()">
+            <h3>我正在经历强迫冲动</h3>
+            <p>点击开始焦虑曲线</p>
+        </div>
+        <div class="stats-row">
+            <div class="stat-mini"><div class="val" id="stat-streak">0</div><div class="lbl">连续天数</div></div>
+            <div class="stat-mini"><div class="val" id="stat-sessions">0</div><div class="lbl">完成记录</div></div>
+            <div class="stat-mini"><div class="val" id="stat-challenges">0</div><div class="lbl">挑战完成</div></div>
+        </div>
+        <div class="section-title">今日建议</div>
+        <div class="today-challenge-card" onclick="app.goToSteps('door')">
+            <div class="challenge-icon door">🚪</div>
+            <div class="challenge-info"><div class="name">门/钥匙检查</div><div class="desc" id="door-hint">准备开始 L1</div></div>
+            <div class="challenge-arrow">›</div>
+        </div>
+        <div class="today-challenge-card" onclick="app.goToSteps('market')">
+            <div class="challenge-icon market">🛒</div>
+            <div class="challenge-info"><div class="name">超市选货</div><div class="desc" id="market-hint">准备开始 L1</div></div>
+            <div class="challenge-arrow">›</div>
+        </div>
+        <div class="section-title">最近记录</div>
+        <div id="recent-sessions">
+            <div class="empty-state"><div class="icon">📝</div><p>还没有记录<br>当你感到强迫冲动时，点击上方按钮</p></div>
+        </div>
+    </div>
+
+    <!-- CALM -->
+    <div class="screen" id="screen-calm">
+        <div class="calm-pre" id="calm-pre">
+            <h2>焦虑曲线</h2>
+            <p class="sub">选择你现在的场景</p>
+            <div class="calm-mode-btn" onclick="app.startSession('waiting')"><div class="icon">⏳</div><h3>等待模式</h3><p>伴侣正在检查，你在等待结果</p></div>
+            <div class="calm-mode-btn" onclick="app.startSession('facing')"><div class="icon">👁️</div><h3>面对模式</h3><p>你正在亲自面对恐惧对象</p></div>
+        </div>
+        <div class="calm-session" id="calm-session">
+            <div class="calm-timer-area">
+                <div class="calm-timer-circle">
+                    <div class="calm-time" id="calm-time">00:00</div>
+                    <div class="calm-time-label">已坚持</div>
+                </div>
+                <div class="calm-phase"><div class="calm-message visible" id="calm-msg">这种感觉会过去的。让它在这里。</div></div>
+            </div>
+            <div class="calm-suds-bar"><span>此刻焦虑</span><input type="range" min="0" max="10" value="7" id="calm-suds-slider" oninput="document.getElementById('calm-suds-val').textContent=this.value"><span class="calm-suds-val" id="calm-suds-val">7</span></div>
+            <div class="calm-actions">
+                <button class="btn btn-calm-done" onclick="app.endSession(false)">我好多了</button>
+                <button class="btn btn-calm-compulsion" onclick="app.endSession(true)">做了强迫行为</button>
+            </div>
+        </div>
+        <div class="calm-review" id="calm-review">
+            <h2>你做到了</h2>
+            <div class="review-stat"><div class="val" id="review-duration">0</div><div class="lbl"><strong>坚持时长</strong>分钟</div></div>
+            <div class="review-stat"><div class="val" id="review-suds-change">0</div><div class="lbl"><strong>焦虑变化</strong>从 <span id="review-s-from">0</span> 降到 <span id="review-s-to">0</span></div></div>
+            <div class="review-message" id="review-message">你的大脑学到了：不确认，焦虑也会消失。</div>
+            <div class="review-question">你做了强迫行为吗？</div>
+            <div class="review-options">
+                <button class="review-opt" data-val="none" onclick="app.selectCompulsion(this)">没有</button>
+                <button class="review-opt" data-val="partial" onclick="app.selectCompulsion(this)">做了一点</button>
+                <button class="review-opt" data-val="yes" onclick="app.selectCompulsion(this)">做了</button>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="app.finishReview()">完成记录</button>
+        </div>
+    </div>
+
+    <!-- STEPS -->
+    <div class="screen" id="screen-steps">
+        <div style="padding-top:24px;"><h2>今日一步</h2><p class="text-muted text-sm mb-4">每天只走一小步。你说了算。</p></div>
+        <div class="scenario-header" onclick="app.toggleScenario('door')"><div class="scenario-icon door">🚪</div><h3>门/钥匙检查</h3><span class="toggle" id="toggle-door">▼</span></div>
+        <div id="levels-door"></div>
+        <div class="scenario-header" onclick="app.toggleScenario('market')"><div class="scenario-icon market">🛒</div><h3>超市选货</h3><span class="toggle" id="toggle-market">▼</span></div>
+        <div id="levels-market"></div>
+        <div style="height:40px;"></div>
+    </div>
+
+    <!-- LETTERS -->
+    <div class="screen" id="screen-letters">
+        <div style="padding-top:24px;display:flex;align-items:center;justify-content:space-between;">
+            <div><h2>给犹豫中的你</h2><p class="text-muted text-sm">冷静时写下，焦虑时重读</p></div>
+            <button class="btn btn-primary btn-sm" onclick="app.openCompose()">+ 写信</button>
+        </div>
+        <div id="letters-list" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- TRENDS -->
+    <div class="screen" id="screen-trends">
+        <div style="padding-top:24px;"><h2>我的趋势</h2><p class="text-muted text-sm mb-4">数据不会说谎。你在变好。</p></div>
+        <div class="stats-row">
+            <div class="stat-mini"><div class="val mono" id="trend-avg-dur">0</div><div class="lbl">平均坚持(分)</div></div>
+            <div class="stat-mini"><div class="val mono" id="trend-avg-drop">0</div><div class="lbl">平均焦虑降幅</div></div>
+            <div class="stat-mini"><div class="val mono" id="trend-total">0</div><div class="lbl">总记录次数</div></div>
+        </div>
+        <div class="trend-chart"><h4>最近7次焦虑记录</h4><div class="chart-bars" id="chart-bars"></div><div class="chart-labels" id="chart-labels"></div></div>
+        <div class="trend-chart"><h4>挑战完成情况</h4><div id="challenge-stats"></div></div>
+    </div>
+</div>
+
+<nav class="tab-bar">
+    <button class="tab-btn active" data-screen="home" onclick="app.navigate('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>首页</span></button>
+    <button class="tab-btn" data-screen="steps" onclick="app.navigate('steps')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span>一步</span></button>
+    <button class="tab-btn tab-btn-calm" data-screen="calm" onclick="app.navigate('calm')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg><span>平静</span></button>
+    <button class="tab-btn" data-screen="letters" onclick="app.navigate('letters')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>信件</span></button>
+    <button class="tab-btn" data-screen="trends" onclick="app.navigate('trends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>趋势</span></button>
+</nav>
+
+<!-- Compose Modal -->
+<div class="modal-overlay" id="modal-compose">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>写一封信</h2>
+        <p class="text-muted text-sm mb-4">给未来焦虑中的自己</p>
+        <div class="letter-scenario-select">
+            <button class="scenario-opt active" data-scenario="general" onclick="app.selectLetterScenario(this)">通用</button>
+            <button class="scenario-opt" data-scenario="door" onclick="app.selectLetterScenario(this)">门/钥匙</button>
+            <button class="scenario-opt" data-scenario="market" onclick="app.selectLetterScenario(this)">超市选货</button>
+        </div>
+        <textarea id="letter-input" placeholder="亲爱的，如果你现在正在犹豫……"></textarea>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button class="btn btn-ghost btn-block" onclick="app.closeCompose()">取消</button>
+            <button class="btn btn-primary btn-block" onclick="app.saveLetter()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Letter View Modal -->
+<div class="modal-overlay" id="modal-letter"><div class="modal" id="letter-view"></div></div>
+
+<script>
+const Store={get(k,d){try{return JSON.parse(localStorage.getItem('ul_'+k))||d}catch{return d}},set(k,v){localStorage.setItem('ul_'+k,JSON.stringify(v))}};
+
+const CHALLENGES={door:{name:'门/钥匙检查',icon:'🚪',levels:[
+{id:'L1',name:'减少确认信息量',anx:'2-3/10',content:'丈夫照常去检查门。回来后只回答"锁好了"两个字，不描述细节。',prev:'不追问细节；不要求再去一次；接受"锁好了"。',partner:'太太追问时，温和地说"我已经告诉你了，锁好了"。',crit:'连续3晚接受"锁好了"两字。'},
+{id:'L2',name:'延迟检查',anx:'3-4/10',content:'太太说"去检查门"后，丈夫说"先躺下，5分钟后再去"。',prev:'5分钟内不重复要求、不催促。',partner:'语气平静——"先躺一会儿，等下我去。"',crit:'连续3晚接受5分钟延迟。'},
+{id:'L3',name:'走到门口（伴侣陪同）',anx:'5-7/10',content:'太太跟着丈夫走到大门口，自己看门是锁好的。',prev:'看完后不要求再看。',partner:'语气轻松。到门口后让她自己看。',crit:'连续3晚。',special:'如果暴躁拒绝，退回L2。'},
+{id:'L3.5',name:'自己走到门口',anx:'6-8/10',content:'丈夫在走廊等。她自己走到门口确认。',prev:'看完就走，不二次确认。',partner:'"你去看一眼，我在这等你。"',crit:'连续3晚。'},
+{id:'L4',name:'自己去检查',anx:'7-9/10',content:'太太自己去门口确认。丈夫留在卧室。',prev:'确认一次后回来。',partner:'什么都不说。正常准备睡觉。',crit:'连续3晚。'},
+{id:'L5',name:'都不检查——直接睡觉',anx:'8-10/10',content:'丈夫说"今晚不检查了"。两个人直接睡觉。',prev:'不自己起来检查。',partner:'"门锁好了，不用查了。"',crit:'完成一次就是巨大胜利。'}
+]},
+market:{name:'超市选货',icon:'🛒',levels:[
+{id:'L1',name:'限制翻选数量',anx:'2-4/10',content:'每个商品最多翻3个就决定。',prev:'翻了3个后不继续翻。',partner:'温和提醒"这个够好了"。',crit:'连续3次购物能做到。'},
+{id:'L2',name:'够好就行',anx:'4-6/10',content:'翻到第一个"没问题"的就拿走。不比日期。',prev:'看到没过期→拿走→不看第二个。',partner:'"你觉得没问题就行。"',crit:'连续3次。',special:'完美主义OCD的根本性转变。'},
+{id:'L3',name:'自己从货架拿商品',anx:'4-6/10',content:'选3件商品，她自己从货架上拿。',prev:'拿了不换。不问"有没有被碰过"。',partner:'不帮她拿。',crit:'连续3次。'},
+{id:'L3.5',name:'全程独立选货',anx:'5-7/10',content:'整个购物过程不问丈夫任何确认问题。',prev:'不寻求任何确认。',partner:'不主动提供建议。',crit:'连续2次。'},
+{id:'L4',name:'接受被碰过的商品',anx:'6-8/10',content:'有人碰了购物车里的东西→不退→带回家。',prev:'不问"他动手脚了吗"。不退。',partner:'简短回答"没事"。',crit:'连续2次。',special:'回家后用焦虑曲线度过延迟焦虑。'},
+{id:'L5',name:'接受不完美',anx:'7-9/10',content:'接受外包装有褶皱。不看生产日期直接拿。',prev:'不换。不检查。',partner:'不评论。',crit:'完成一次就是巨大胜利。'}
+]}};
+
+const CALM_MSGS={waiting:[{t:0,m:'你不需要听。不管结果如何，焦虑会过去的。'},{t:30,m:'你正在做最难的部分——什么都不做。'},{t:120,m:'这种感觉会过去的。让它在这里。'},{t:300,m:'你已经5分钟了。你的大脑正在学习。'},{t:600,m:'焦虑正在开始降低，即使你感觉不到。'},{t:900,m:'你已经走了这么远。'},{t:1200,m:'记住这个感觉。下次你身体会记得它能度过。'}],facing:[{t:0,m:'不需要做任何事。你只需要待在这里。'},{t:30,m:'你的身体正在经历一场风暴。风暴会过去。'},{t:120,m:'每一个不确认的60秒，你的大脑都在学习。'},{t:300,m:'你正在做最难的部分——什么都不做。'},{t:600,m:'焦虑正在开始降低，即使你感觉不到。'},{t:900,m:'大部分人在这个时间点，焦虑已经降了2-3分。'},{t:1200,m:'你刚才做了一件OCD不想让你做的事——等它自己走。'}]};
+
+class App{
+    constructor(){this.timer=null;this.start=null;this.mode=null;this.initSuds=7;this.msgIdx=0;this.exp={door:true,market:true};this.letterSc='general';this.comp='none';this._ps=null;this.init();}
+    init(){
+        this.greet();this.homeStats();this.renderLevels('door');this.renderLevels('market');this.renderLetters();this.renderTrends();this.homeHints();
+        if(!Store.get('letters',null)){Store.set('letters',[{id:'d1',sc:'door',content:'亲爱的，如果你现在正在犹豫要不要让他再去查一次：\n\n他刚去检查过了。门检查过了。不管你有没有听到足够大的关门声，门就是锁好的。\n\n现在去睡觉吧。你会熬过去的。\n\n——冷静时的你',ts:Date.now()-864e5},{id:'d2',sc:'market',content:'亲爱的，如果你现在正在想那个人到底有没有碰你的东西——\n\n你把它带回家了。没有发生任何可怕的事。\n\n"不够确定"和"不安全"是两回事。今天你做到了。\n\n——冷静时的你',ts:Date.now()-864e5}]);this.renderLetters();}
+        setTimeout(()=>{const s=document.getElementById('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',600);},1800);
+    }
+    navigate(s){
+        document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+        document.getElementById('screen-'+s).classList.add('active');
+        document.querySelector(`.tab-btn[data-screen="${s}"]`).classList.add('active');
+        if(s==='calm'){document.getElementById('calm-pre').style.display='flex';document.getElementById('calm-session').classList.remove('active');document.getElementById('calm-review').classList.remove('active');if(this.timer){clearInterval(this.timer);this.timer=null;}}
+        if(s==='home'){this.homeStats();this.homeHints();}
+        if(s==='trends')this.renderTrends();
+        if(s==='letters')this.renderLetters();
+        if(s==='steps'){this.renderLevels('door');this.renderLevels('market');}
+    }
+    goToSteps(sc){this.navigate('steps');this.exp[sc]=true;this.renderLevels(sc);}
+    startCalm(){this.navigate('calm');}
+    greet(){const h=new Date().getHours();const e=document.getElementById('greeting'),s=document.getElementById('greeting-sub');if(h<6){e.textContent='深夜了';s.textContent='如果需要，我在这里。';}else if(h<12){e.textContent='早上好';s.textContent='新的一天，新的一步。';}else if(h<18){e.textContent='下午好';s.textContent='你今天辛苦了。';}else{e.textContent='晚上好';s.textContent='每一天的一步，都算数。';}}
+    homeStats(){
+        const ss=Store.get('sessions',[]),cp=Store.get('cp',{});let tc=0;Object.values(cp).forEach(c=>tc+=(c.done||[]).length);
+        const td=new Date().toDateString(),days=[...new Set(ss.map(s=>new Date(s.st).toDateString()))];let streak=0,d=new Date();while(days.includes(d.toDateString())||streak===0){if(days.includes(d.toDateString()))streak++;else break;d.setDate(d.getDate()-1);}
+        document.getElementById('stat-streak').textContent=streak;document.getElementById('stat-sessions').textContent=ss.length;document.getElementById('stat-challenges').textContent=tc;
+    }
+    homeHints(){const cp=Store.get('cp',{});['door','market'].forEach(sc=>{const p=cp[sc]||{cur:0,done:[]};const ls=CHALLENGES[sc].levels;const cl=ls[Math.min(p.cur,ls.length-1)];const el=document.getElementById(sc==='door'?'door-hint':'market-hint');if(p.cur>=ls.length)el.textContent='全部完成！';else{const su=(p.done||[]).filter(c=>c.lv===cl.id).length;el.textContent=`${cl.id} ${cl.name} · ${su}/3`;}});}
+    startSession(mode){
+        this.mode=mode;this.start=Date.now();this.msgIdx=0;this.initSuds=parseInt(document.getElementById('calm-suds-slider')?.value||7);
+        document.getElementById('calm-pre').style.display='none';document.getElementById('calm-session').classList.add('active');document.getElementById('calm-review').classList.remove('active');
+        const m=document.getElementById('calm-msg');m.textContent=CALM_MSGS[mode][0].m;m.classList.add('visible');
+        document.getElementById('calm-suds-slider').value=this.initSuds;document.getElementById('calm-suds-val').textContent=this.initSuds;
+        this.timer=setInterval(()=>this.tick(),1000);this.tick();
+    }
+    tick(){
+        const s=Math.floor((Date.now()-this.start)/1000);document.getElementById('calm-time').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+        const msgs=CALM_MSGS[this.mode];for(let i=msgs.length-1;i>=0;i--){if(s>=msgs[i].t&&i>this.msgIdx){this.msgIdx=i;const m=document.getElementById('calm-msg');m.classList.remove('visible');setTimeout(()=>{m.textContent=msgs[i].m;m.classList.add('visible');},400);break;}}
+    }
+    endSession(comp){
+        if(this.timer){clearInterval(this.timer);this.timer=null;}
+        const dur=Math.round((Date.now()-this.start)/1000),fs=parseInt(document.getElementById('calm-suds-slider').value),dm=Math.round(dur/60*10)/10;
+        document.getElementById('calm-session').classList.remove('active');document.getElementById('calm-review').classList.add('active');
+        document.getElementById('review-duration').textContent=dm;document.getElementById('review-s-from').textContent=this.initSuds;document.getElementById('review-s-to').textContent=fs;document.getElementById('review-suds-change').textContent=(this.initSuds-fs);
+        const msgs=['你的大脑学到了：不确认，焦虑也会消失。','你刚才做到了。因为你选择了面对。','每一次坚持，都在重新训练你的大脑。'];
+        document.getElementById('review-message').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+        this._ps={id:'s_'+Date.now(),mode:this.mode,st:this.start,et:Date.now(),dur,si:this.initSuds,sf:fs,comp:comp?'yes':'pending'};
+        this.comp='none';document.querySelectorAll('.review-opt').forEach(o=>o.classList.remove('selected'));
+    }
+    selectCompulsion(btn){document.querySelectorAll('.review-opt').forEach(o=>o.classList.remove('selected'));btn.classList.add('selected');this.comp=btn.dataset.val;}
+    finishReview(){if(this._ps){this._ps.comp=this.comp||'none';const ss=Store.get('sessions',[]);ss.push(this._ps);Store.set('sessions',ss);this._ps=null;}this.navigate('home');}
+    renderLevels(sc){
+        const c=document.getElementById('levels-'+sc),cp=Store.get('cp',{}),p=cp[sc]||{cur:0,done:[]},ls=CHALLENGES[sc].levels,ex=this.exp[sc];
+        document.getElementById('toggle-'+sc).classList.toggle('open',ex);c.style.display=ex?'block':'none';if(!ex)return;
+        let h='';ls.forEach((l,i)=>{const su=(p.done||[]).filter(x=>x.lv===l.id).length;let st='locked';if(i<p.cur)st='done';else if(i===p.cur)st='current';const si=st==='done'?'✓':st==='current'?'→':'🔒';
+        h+=`<div class="level-card ${st}" id="lv-${sc}-${l.id}"><div class="level-top" onclick="app.toggleLevel('${sc}','${l.id}')"><div class="level-badge">${l.id}</div><div class="level-info"><div class="name">${l.name}</div><div class="anxiety">焦虑 ${l.anx}</div>${st==='current'?`<div class="progress-dots">${[0,1,2].map(j=>`<div class="progress-dot ${j<su?'filled':''}"></div>`).join('')}</div>`:''}</div><div class="level-status">${si}</div></div><div class="level-detail"><h4>挑战内容</h4><p>${l.content}</p><h4>反应预防</h4><p>${l.prev}</p><h4>伴侣行为</h4><p>${l.partner}</p><h4>成功标准</h4><p>${l.crit}</p>${l.special?`<div class="card card-warm" style="margin-top:12px;padding:12px 16px;"><p style="margin:0;font-size:13px;">${l.special}</p></div>`:''}${st==='current'?`<div class="level-actions"><button class="btn btn-primary btn-block btn-sm" onclick="event.stopPropagation();app.completeChallenge('${sc}','${l.id}')">✓ 完成了</button><button class="btn btn-ghost btn-block btn-sm" onclick="event.stopPropagation();app.skipChallenge('${sc}','${l.id}')">今天跳过</button></div>`:''}</div></div>`;});c.innerHTML=h;
+    }
+    toggleScenario(sc){this.exp[sc]=!this.exp[sc];this.renderLevels(sc);}
+    toggleLevel(sc,id){document.getElementById('lv-'+sc+'-'+id).classList.toggle('expanded');}
+    completeChallenge(sc,id){const cp=Store.get('cp',{});if(!cp[sc])cp[sc]={cur:0,done:[]};const p=cp[sc];p.done.push({lv:id,ts:Date.now()});const su=p.done.filter(x=>x.lv===id).length;if(su>=3)p.cur=Math.min(p.cur+1,CHALLENGES[sc].levels.length-1);Store.set('cp',cp);this.renderLevels(sc);this.homeStats();this.homeHints();}
+    skipChallenge(sc,id){document.getElementById('lv-'+sc+'-'+id).classList.remove('expanded');}
+    renderLetters(){const ls=Store.get('letters',[]),c=document.getElementById('letters-list');if(!ls.length){c.innerHTML='<div class="empty-state"><div class="icon">✉️</div><p>还没有信件</p></div>';return;}c.innerHTML=ls.sort((a,b)=>b.ts-a.ts).map(l=>{const t=l.sc==='door'?'<span class="letter-tag door">门/钥匙</span>':l.sc==='market'?'<span class="letter-tag market">超市</span>':'<span class="letter-tag general">通用</span>';const d=new Date(l.ts).toLocaleDateString('zh-CN',{month:'short',day:'numeric'});return`<div class="letter-card" onclick="app.viewLetter('${l.id}')"><div class="letter-preview">${l.content.replace(/\n/g,' ').substring(0,80)}…</div><div class="letter-meta">${t}<span>${d}</span></div></div>`;}).join('');}
+    openCompose(){document.getElementById('modal-compose').classList.add('active');document.getElementById('letter-input').value='';this.letterSc='general';document.querySelectorAll('#modal-compose .scenario-opt').forEach(o=>o.classList.toggle('active',o.dataset.scenario==='general'));}
+    closeCompose(){document.getElementById('modal-compose').classList.remove('active');}
+    selectLetterScenario(btn){document.querySelectorAll('#modal-compose .scenario-opt').forEach(o=>o.classList.remove('active'));btn.classList.add('active');this.letterSc=btn.dataset.scenario;}
+    saveLetter(){const c=document.getElementById('letter-input').value.trim();if(!c)return;const ls=Store.get('letters',[]);ls.push({id:'l_'+Date.now(),sc:this.letterSc,content:c,ts:Date.now()});Store.set('letters',ls);this.closeCompose();this.renderLetters();}
+    viewLetter(id){const l=Store.get('letters',[]).find(x=>x.id===id);if(!l)return;const t=l.sc==='door'?'门/钥匙':l.sc==='market'?'超市选货':'通用';const d=new Date(l.ts).toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});document.getElementById('letter-view').innerHTML=`<div class="modal-handle"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span class="letter-tag ${l.sc}">${t}</span><span class="text-muted text-sm">${d}</span></div><div style="font-size:15px;line-height:1.9;color:var(--text-2);white-space:pre-wrap;margin-bottom:24px;">${l.content}</div><div style="display:flex;gap:10px;"><button class="btn btn-ghost btn-block btn-sm" onclick="document.getElementById('modal-letter').classList.remove('active')">关闭</button><button class="btn btn-danger btn-block btn-sm" onclick="app.deleteLetter('${l.id}')">删除</button></div>`;document.getElementById('modal-letter').classList.add('active');}
+    deleteLetter(id){Store.set('letters',Store.get('letters',[]).filter(x=>x.id!==id));document.getElementById('modal-letter').classList.remove('active');this.renderLetters();}
+    renderTrends(){const ss=Store.get('sessions',[]);if(ss.length>0){document.getElementById('trend-avg-dur').textContent=Math.round(ss.reduce((s,x)=>s+x.dur,0)/ss.length/60);document.getElementById('trend-avg-drop').textContent=Math.round(ss.reduce((s,x)=>s+(x.si-x.sf),0)/ss.length*10)/10;document.getElementById('trend-total').textContent=ss.length;}const r=ss.slice(-7),be=document.getElementById('chart-bars'),le=document.getElementById('chart-labels');if(!r.length){be.innerHTML='<div class="empty-state" style="width:100%;padding:20px;"><p>开始记录后显示趋势</p></div>';le.innerHTML='';}else{be.innerHTML=r.map(s=>`<div class="chart-bar" style="height:${s.si/10*100}%;background:${s.comp==='yes'?'var(--accent-light)':'var(--primary-light)'}"><span class="tip">${s.si}</span></div>`).join('');le.innerHTML=r.map(s=>{const d=new Date(s.st);return`<span>${d.getMonth()+1}/${d.getDate()}</span>`;}).join('');}const cp=Store.get('cp',{}),ce=document.getElementById('challenge-stats');let ch='';Object.entries(CHALLENGES).forEach(([k,v])=>{const p=cp[k]||{cur:0,done:[]};ch+=`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-light);"><span style="font-size:18px;">${v.icon}</span><div style="flex:1;"><strong style="font-size:14px;">${v.name}</strong><br><span class="text-muted text-sm">${p.cur>=v.levels.length?'全部完成':v.levels[p.cur].id+' '+v.levels[p.cur].name}</span></div><span class="mono" style="font-size:14px;color:var(--primary);">${p.done.length}次</span></div>`;});ce.innerHTML=ch||'<p class="text-muted text-sm text-center">还没有挑战记录</p>';}
+}
+
+const app=new App();
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('active');});});
+
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-banner').classList.add('show');});
+document.getElementById('btn-install').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('install-banner').classList.remove('show');});
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
