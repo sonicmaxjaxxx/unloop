@@ -141,7 +141,7 @@
 
         /* CALM */
         #screen-calm{padding:0;}
-        #screen-calm.active{display:flex;flex-direction:column;}
+        #screen-calm.active{display:flex;flex-direction:column;height:100%;}
         .calm-pre{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px calc(var(--tab-h)+40px);text-align:center;}
         .calm-pre h2{font-family:'Noto Serif SC',serif;margin-bottom:8px;}
         .calm-pre .sub{color:var(--text-3);margin-bottom:36px;}
@@ -150,7 +150,7 @@
         .calm-mode-btn h3{margin-bottom:4px;font-size:16px;}
         .calm-mode-btn p{font-size:13px;color:var(--text-3);margin-bottom:0;}
         .calm-mode-btn .icon{font-size:24px;margin-bottom:8px;}
-        .calm-session{display:none;flex-direction:column;height:100vh;height:100dvh;background:var(--calm-bg);position:relative;}
+        .calm-session{display:none;flex-direction:column;flex:1;background:var(--calm-bg);position:relative;min-height:0;}
         .calm-session.active{display:flex;}
         .calm-timer-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
         .calm-timer-circle{width:200px;height:200px;border-radius:50%;border:3px solid var(--calm-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;animation:breathe 6s ease-in-out infinite;}
@@ -168,7 +168,7 @@
         .calm-actions .btn{flex:1;padding:16px;border-radius:var(--radius);font-size:14px;}
         .btn-calm-done{background:var(--calm-accent);color:var(--calm-bg);}
         .btn-calm-compulsion{background:var(--calm-surface);color:var(--calm-muted);border:1px solid rgba(255,255,255,0.1);}
-        .calm-review{display:none;flex-direction:column;height:100vh;height:100dvh;background:var(--calm-bg);padding:60px 24px 40px;overflow-y:auto;}
+        .calm-review{display:none;flex-direction:column;flex:1;background:var(--calm-bg);padding:60px 24px 40px;overflow-y:auto;min-height:0;}
         .calm-review.active{display:flex;}
         .calm-review h2{color:var(--calm-text);font-family:'Noto Serif SC',serif;margin-bottom:24px;text-align:center;}
         .review-stat{background:var(--calm-surface);border-radius:var(--radius);padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;}
