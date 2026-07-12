@@ -46,13 +46,21 @@
             --tab-h: 64px;
         }
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-        html,body{height:100%;overflow:hidden;}
+        html{height:100%;}
         body{
             font-family:'Noto Sans SC',-apple-system,sans-serif;
             background:var(--bg);color:var(--text-1);
             line-height:1.6;font-size:15px;
             -webkit-font-smoothing:antialiased;
-            padding-top:env(safe-area-inset-top,0);
+            height:100%;overflow:hidden;
+            padding-top:env(safe-area-inset-top,0px);
+        }
+        /* PWA standalone: Android安全区=0但状态栏仍遮挡内容，强制留出28px */
+        @media (display-mode:standalone){
+            body{
+                padding-top:28px;
+                padding-top:max(env(safe-area-inset-top,0px),28px);
+            }
         }
 
         /* Splash */
@@ -67,18 +75,39 @@
         .install-banner .btn-install{background:white;color:var(--primary);border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;}
         .install-banner .btn-close-install{background:none;border:none;color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;padding:4px;margin-left:auto;}
 
-        /* App Shell */
-        #app{position:relative;width:100%;max-width:480px;height:100vh;height:100dvh;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-        .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px calc(var(--tab-h)+20px);display:none;-webkit-overflow-scrolling:touch;}
+        /* App Shell — 用百分比而非vh，让高度链自然跟随body */
+        #app{
+            position:relative;width:100%;max-width:480px;
+            height:100%;margin:0 auto;
+            display:flex;flex-direction:column;
+            overflow:hidden;background:var(--bg);
+        }
+
+        /* 普通页面：顶部20px间距 + 底部为tab栏+安全区留空间 */
+        .screen{
+            flex:1;overflow-y:auto;overflow-x:hidden;
+            padding:20px 20px calc(var(--tab-h) + 20px + env(safe-area-inset-bottom,0px));
+            display:none;-webkit-overflow-scrolling:touch;
+        }
         .screen.active{display:block;}
         .screen::-webkit-scrollbar{display:none;}
 
+        /* Calm页面：flex列布局，底部只为tab栏+安全区留空间（顶部由内部子元素自行处理） */
+        #screen-calm{padding:0 0 calc(var(--tab-h) + env(safe-area-inset-bottom,0px)) 0;}
+        #screen-calm.active{display:flex;flex-direction:column;}
+
         /* Tab Bar */
-        .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--tab-h);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;padding-bottom:env(safe-area-inset-bottom,0);}
+        .tab-bar{
+            position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+            width:100%;max-width:480px;height:var(--tab-h);
+            background:var(--surface);border-top:1px solid var(--border);
+            display:flex;align-items:center;justify-content:space-around;z-index:100;
+            padding-bottom:env(safe-area-inset-bottom,0);
+        }
         .tab-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:10px;font-weight:500;transition:color 0.2s;min-width:56px;font-family:inherit;}
         .tab-btn.active{color:var(--primary);}
         .tab-btn svg{width:24px;height:24px;}
-        .tab-btn-calm{position:relative;top:-16px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:white!important;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(45,90,61,0.35);transition:transform 0.2s;}
+        .tab-btn-calm{position:relative;top:-16px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:white!important; display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(45,90,61,0.35);transition:transform 0.2s;}
         .tab-btn-calm:active{transform:scale(0.95);}
         .tab-btn-calm svg{width:26px;height:26px;}
         .tab-btn-calm span{display:none;}
@@ -139,10 +168,15 @@
         .challenge-info .desc{font-size:13px;color:var(--text-3);}
         .challenge-arrow{color:var(--text-3);font-size:18px;}
 
-        /* CALM */
-        #screen-calm{padding:0;}
-        #screen-calm.active{display:flex;flex-direction:column;height:100%;}
-        .calm-pre{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px calc(var(--tab-h)+40px);text-align:center;}
+        /* ===== CALM SCREEN ===== */
+
+        /* 场景选择（等待/面对） */
+        .calm-pre{
+            flex:1;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            padding:40px 24px;
+            text-align:center;overflow-y:auto;
+        }
         .calm-pre h2{font-family:'Noto Serif SC',serif;margin-bottom:8px;}
         .calm-pre .sub{color:var(--text-3);margin-bottom:36px;}
         .calm-mode-btn{width:100%;max-width:320px;padding:24px 20px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface);text-align:left;cursor:pointer;margin-bottom:16px;transition:all 0.2s;}
@@ -150,25 +184,68 @@
         .calm-mode-btn h3{margin-bottom:4px;font-size:16px;}
         .calm-mode-btn p{font-size:13px;color:var(--text-3);margin-bottom:0;}
         .calm-mode-btn .icon{font-size:24px;margin-bottom:8px;}
-        .calm-session{display:none;flex-direction:column;flex:1;background:var(--calm-bg);position:relative;min-height:0;}
+
+        /* 焦虑曲线主界面
+           关键：flex:1 + min-height:0，不用height:100vh
+           这样它会自动填满#screen-calm减去底部tab栏空间后的剩余区域 */
+        .calm-session{
+            display:none;flex-direction:column;
+            flex:1;min-height:0;
+            background:var(--calm-bg);
+        }
         .calm-session.active{display:flex;}
-        .calm-timer-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
-        .calm-timer-circle{width:200px;height:200px;border-radius:50%;border:3px solid var(--calm-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;animation:breathe 6s ease-in-out infinite;}
+
+        /* 计时器区域：flex:1吃掉剩余空间，min-height:0允许被压缩 */
+        .calm-timer-area{
+            flex:1;min-height:0;
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            padding:20px;
+        }
+        .calm-timer-circle{
+            width:180px;height:180px;border-radius:50%;
+            border:3px solid var(--calm-surface);
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            position:relative;animation:breathe 6s ease-in-out infinite;
+            flex-shrink:0;
+        }
         .calm-timer-circle::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(127,176,105,0.15);animation:breathe 6s ease-in-out infinite 0.5s;}
         .calm-time{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:var(--calm-text);letter-spacing:-0.02em;}
         .calm-time-label{font-size:12px;color:var(--calm-muted);margin-top:4px;}
-        .calm-phase{margin-top:32px;text-align:center;min-height:80px;}
-        .calm-message{font-size:17px;line-height:1.7;color:var(--calm-text);max-width:300px;opacity:0;transition:opacity 0.8s ease;}
+        .calm-phase{margin-top:24px;text-align:center;min-height:60px;padding:0 12px;}
+        .calm-message{font-size:16px;line-height:1.7;color:var(--calm-text);max-width:300px;opacity:0;transition:opacity 0.8s ease;}
         .calm-message.visible{opacity:1;}
-        .calm-suds-bar{display:flex;align-items:center;gap:12px;padding:16px 24px;color:var(--calm-muted);font-size:13px;}
+
+        /* 焦虑滑块：flex-shrink:0保证不被压缩 */
+        .calm-suds-bar{
+            display:flex;align-items:center;gap:12px;
+            padding:12px 24px;
+            color:var(--calm-muted);font-size:13px;
+            flex-shrink:0;
+        }
         .calm-suds-bar input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--calm-surface);}
         .calm-suds-bar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--calm-accent);box-shadow:0 0 12px rgba(127,176,105,0.4);}
         .calm-suds-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--calm-accent);min-width:30px;text-align:center;}
-        .calm-actions{display:flex;gap:12px;padding:16px 20px calc(var(--tab-h)+20px);}
+
+        /* 按钮区域：flex-shrink:0 + 不需要额外的tab栏padding（容器#screen-calm已处理） */
+        .calm-actions{
+            display:flex;gap:12px;
+            padding:16px 20px 20px;
+            flex-shrink:0;
+        }
         .calm-actions .btn{flex:1;padding:16px;border-radius:var(--radius);font-size:14px;}
         .btn-calm-done{background:var(--calm-accent);color:var(--calm-bg);}
         .btn-calm-compulsion{background:var(--calm-surface);color:var(--calm-muted);border:1px solid rgba(255,255,255,0.1);}
-        .calm-review{display:none;flex-direction:column;flex:1;background:var(--calm-bg);padding:60px 24px 40px;overflow-y:auto;min-height:0;}
+
+        /* 回顾页面 */
+        .calm-review{
+            display:none;flex-direction:column;
+            flex:1;min-height:0;
+            background:var(--calm-bg);
+            padding:40px 24px;
+            overflow-y:auto;
+        }
         .calm-review.active{display:flex;}
         .calm-review h2{color:var(--calm-text);font-family:'Noto Serif SC',serif;margin-bottom:24px;text-align:center;}
         .review-stat{background:var(--calm-surface);border-radius:var(--radius);padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;}
